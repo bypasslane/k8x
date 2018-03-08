@@ -9,6 +9,8 @@
 CONTEXT_NAME="$(kubectl config current-context)"
 CONTEXT_DIR="$CONTEXT_NAME.$(date +%Y-%m-%d-%H%m.%S)"
 
+#function join_by { local d=$1; shift; echo -n "$1"; shift; printf "%s" "${@/#/$d}"; }
+
 mkdir ${CONTEXT_DIR}
 cd ${CONTEXT_DIR}
 
@@ -20,7 +22,7 @@ kubectl get namespace | awk -F " " '{print $1}' | tail -n+2 | while read NAMESPA
     kubectl get deployment --namespace=${NAMESPACE} | awk -F " " '{print $1}' | tail -n+2 | while read DEPLOYMENT; do
         if ! [[ ${DEPLOYMENT} =~  "No resources found." ]]; then
             echo -e "\t\t${DEPLOYMENT}.deployment.yaml"
-            kubectl get deployment ${DEPLOYMENT} --namespace=${NAMESPACE} -oyaml --export=true > ${DEPLOYMENT}.deployment.yaml &
+            kubectl get deployment ${DEPLOYMENT} --namespace=${NAMESPACE} -oyaml --export=true | yq r -j - | jq 'del(..|.metadata?)|del(.spec.replicas)' | yq r - > ${DEPLOYMENT}.deployment.yaml  &
         fi
     done
     wait
@@ -28,7 +30,7 @@ kubectl get namespace | awk -F " " '{print $1}' | tail -n+2 | while read NAMESPA
     kubectl get configmap --namespace=${NAMESPACE} | awk -F " " '{print $1}' | tail -n+2 | while read CONFIG_MAP; do
         if ! [[ ${CONFIG_MAP} =~  "No resources found." ]]; then
             echo -e "\t\t${CONFIG_MAP}.configmap.yaml"
-            kubectl get configmap ${CONFIG_MAP} --namespace=${NAMESPACE} -oyaml --export=true > ${CONFIG_MAP}.configmap.yaml &
+            kubectl get configmap ${CONFIG_MAP} --namespace=${NAMESPACE} -oyaml --export=true | yq r -j - | jq 'del(..|.metadata?)' | yq r - > ${CONFIG_MAP}.configmap.yaml &
         fi
     done
     wait
@@ -36,7 +38,7 @@ kubectl get namespace | awk -F " " '{print $1}' | tail -n+2 | while read NAMESPA
     kubectl get service --namespace=${NAMESPACE} | awk -F " " '{print $1}' | tail -n+2 | while read SERVICE; do
         if ! [[ ${SERVICE} =~  "No resources found." ]]; then
             echo -e "\t\t${SERVICE}.service.yaml"
-            kubectl get service ${SERVICE} --namespace=${NAMESPACE} -oyaml --export=true > ${SERVICE}.service.yaml &
+            kubectl get service ${SERVICE} --namespace=${NAMESPACE} -oyaml --export=true | yq r -j - | jq 'del(..|.metadata?)' | yq r - > ${SERVICE}.service.yaml &
         fi
     done
     wait
@@ -44,7 +46,7 @@ kubectl get namespace | awk -F " " '{print $1}' | tail -n+2 | while read NAMESPA
     kubectl get ingress --namespace=${NAMESPACE} | awk -F " " '{print $1}' | tail -n+2 | while read INGRESS; do
         if ! [[ ${INGRESS} =~  "No resources found." ]]; then
             echo -e "\t\t${INGRESS}.ingress.yaml"
-            kubectl get ingress ${INGRESS} --namespace=${NAMESPACE} -oyaml --export=true > ${INGRESS}.ingress.yaml &
+            kubectl get ingress ${INGRESS} --namespace=${NAMESPACE} -oyaml --export=true | yq r -j - | jq 'del(..|.metadata?)|del(.spec.rules.host?)' | yq r - > ${INGRESS}.ingress.yaml &
         fi
     done
     wait
